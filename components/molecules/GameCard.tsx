@@ -2,6 +2,7 @@ import { Pressable, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import StyledText from '../atoms/Text';
 import { Ionicons } from '@expo/vector-icons';
+import { COLORS } from '../../lib/core/constants';
 
 interface GameCardProps {
   title: string;
@@ -19,7 +20,7 @@ export default function GameCard({ title, icon, link }: GameCardProps) {
       ]}
       onPress={() => router.push(link)}
     >
-      <Ionicons name={icon} size={48} color="white" />
+      <Ionicons name={icon} size={48} color={COLORS.text} />
       <StyledText style={styles.cardText}>{title}</StyledText>
     </Pressable>
   );
@@ -27,7 +28,7 @@ export default function GameCard({ title, icon, link }: GameCardProps) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#3a3a5e',
+    backgroundColor: COLORS.surface,
     borderRadius: 20,
     padding: 25,
     alignItems: 'center',
@@ -35,14 +36,14 @@ const styles = StyleSheet.create({
     width: 150,
     height: 150,
     margin: 10,
-    shadowColor: '#3a3a5e',
+    shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.3,
     shadowRadius: 15,
     elevation: 8,
   },
   cardPressed: {
-    backgroundColor: '#2e2e4a',
+    backgroundColor: COLORS.primaryDark,
     transform: [{ scale: 0.96 }],
   },
   cardText: {
@@ -50,5 +51,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 15,
     textAlign: 'center',
+    color: COLORS.text,
   },
 });

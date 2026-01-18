@@ -1,6 +1,7 @@
 import { View, StyleSheet, FlatList } from 'react-native';
 import GameCard from '../components/molecules/GameCard';
 import StyledText from '../components/atoms/Text';
+import { COLORS } from '../lib/core/constants';
 
 const games = [
   {
@@ -38,7 +39,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'space-around',
     alignItems: 'center',
-    backgroundColor: '#0f172a',
+    backgroundColor: COLORS.background,
     paddingTop: 275,
   },
   header: {
@@ -49,10 +50,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 10,
     textAlign: 'center',
+    color: COLORS.text,
   },
   subtitle: {
     fontSize: 18,
-    color: '#94a3b8',
+    color: COLORS.textSecondary,
     textAlign: 'center',
   },
   gameList: {

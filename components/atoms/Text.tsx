@@ -1,4 +1,5 @@
 import { Text, StyleSheet } from 'react-native';
+import { COLORS } from '../../lib/core/constants';
 
 interface TextProps {
   style?: object;
@@ -11,6 +12,6 @@ export default function StyledText({ style, children }: TextProps) {
 
 const styles = StyleSheet.create({
   text: {
-    color: '#ffffff',
+    color: COLORS.text,
   },
 });

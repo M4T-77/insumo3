@@ -2,6 +2,7 @@ import { View, StyleSheet, Pressable } from 'react-native';
 import StyledText from '../../components/atoms/Text';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { COLORS } from '../../lib/core/constants';
 
 export default function DiceGame() {
   const diceValue = 1;
@@ -22,7 +23,7 @@ export default function DiceGame() {
   return (
     <View style={styles.container}>
       <Pressable style={styles.backButton} onPress={() => router.back()}>
-        <Ionicons name="arrow-back-circle-outline" size={48} color="white" />
+        <Ionicons name="arrow-back-circle-outline" size={48} color={COLORS.text} />
       </Pressable>
 
       <StyledText style={styles.title}>Dado Mágico</StyledText>
@@ -31,7 +32,7 @@ export default function DiceGame() {
         <FontAwesome5
           name={getDiceIconName(diceValue)}
           size={150}
-          color="white"
+          color={COLORS.diceBackground}
         />
       </View>
 
@@ -47,7 +48,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1a1a2e',
+    backgroundColor: COLORS.background,
     padding: 20,
   },
   backButton: {
@@ -60,9 +61,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 60,
     textAlign: 'center',
+    color: COLORS.text,
   },
   diceContainer: {
-    shadowColor: '#9333ea',
+    shadowColor: COLORS.shadow,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.5,
     shadowRadius: 20,
@@ -70,7 +72,7 @@ const styles = StyleSheet.create({
   },
   instruction: {
     fontSize: 20,
-    color: '#a78bfa',
+    color: COLORS.accent,
     marginTop: 50,
     textAlign: 'center',
     fontWeight: '500',
