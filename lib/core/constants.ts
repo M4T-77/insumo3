@@ -1,4 +1,3 @@
-
 export const SHAKE_THRESHOLD = 1.78;
 
 export const UPDATE_INTERVAL = 100;
@@ -15,14 +14,12 @@ export const ROLL_ANIMATION_DURATION = 300;
 
 
 export const COLORS = {
-  // Palette based on user request
   background: '#403925',
   surface: '#73624D',
   primary: '#D9C3A9',
   text: '#F2E2CE',
   accent: '#A68D77',
 
-  // Original names mapped to new palette
   primaryDark: '#73624D',
   primaryLight: '#F2E2CE',
   
@@ -49,7 +46,6 @@ export const COLORS = {
   overlayLight: 'rgba(242, 226, 206, 0.1)',
 } as const;
 
-
 export const TYPOGRAPHY = {
   fontSize: {
     xs: 12,
@@ -74,7 +70,6 @@ export const TYPOGRAPHY = {
   },
 } as const;
 
-
 export const SPACING = {
   xs: 4,
   sm: 8,
@@ -84,7 +79,6 @@ export const SPACING = {
   '2xl': 48,
   '3xl': 64,
 } as const;
-
 
 export const DIMENSIONS = {
   diceSize: 150,
@@ -98,7 +92,6 @@ export const DIMENSIONS = {
   cardBorderRadius: 15,
 } as const;
 
-
 export const ANIMATIONS = {
   fast: 150,
   normal: 300,
@@ -109,7 +102,6 @@ export const ANIMATIONS = {
   easeInOut: 'ease-in-out',
 } as const;
 
-
 export const MESSAGES = {
   sensorActive: '¡Agita tu teléfono!',
   sensorInactive: 'Activando sensor...',
@@ -117,7 +109,6 @@ export const MESSAGES = {
   rolling: 'Lanzando...',
   ready: 'Listo para jugar',
 } as const;
-
 
 export type ColorKeys = keyof typeof COLORS;
 export type TypographyKeys = keyof typeof TYPOGRAPHY;

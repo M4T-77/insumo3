@@ -3,7 +3,15 @@ import { View, StyleSheet, Pressable, Animated } from 'react-native';
 import StyledText from '../../components/atoms/Text';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { COLORS, SHAKE_THRESHOLD, COOLDOWN_TIME } from '../../lib/core/constants';
+import { 
+  COLORS, 
+  SHAKE_THRESHOLD, 
+  COOLDOWN_TIME, 
+  DIMENSIONS, 
+  ANIMATIONS, 
+  TYPOGRAPHY, 
+  MESSAGES 
+} from '../../lib/core/constants';
 import { useAccelerometer } from '../../lib/modules/sensors/acelerometer/useAccelerometer';
 import { isShaking } from '../../lib/core/logic/motion';
 
@@ -29,12 +37,12 @@ export default function DiceGame() {
     Animated.sequence([
       Animated.timing(rollAnimation, {
         toValue: 1,
-        duration: 150,
+        duration: ANIMATIONS.fast,
         useNativeDriver: true,
       }),
       Animated.timing(rollAnimation, {
         toValue: 0,
-        duration: 150,
+        duration: ANIMATIONS.fast,
         useNativeDriver: true,
       }),
     ]).start(() => {
@@ -70,21 +78,21 @@ export default function DiceGame() {
   return (
     <View style={styles.container}>
       <Pressable style={styles.backButton} onPress={() => router.back()}>
-        <Ionicons name="arrow-back-circle-outline" size={48} color={COLORS.text} />
+        <Ionicons name="arrow-back-circle-outline" size={TYPOGRAPHY.fontSize['5xl']} color={COLORS.text} />
       </Pressable>
 
-      <StyledText style={styles.title}>Dado Mágico</StyledText>
+      <StyledText style={styles.title}>{MESSAGES.ready}</StyledText>
 
       <Animated.View style={[styles.diceContainer, animatedStyle]}>
         <FontAwesome5
           name={getDiceIconName(diceValue)}
-          size={150}
+          size={DIMENSIONS.diceSize}
           color={COLORS.diceBackground}
         />
       </Animated.View>
 
       <StyledText style={styles.instruction}>
-        {isAvailable ? 'Agita tu teléfono para lanzar el dado' : 'Sensor no disponible'}
+        {isAvailable ? MESSAGES.sensorActive : MESSAGES.sensorUnavailable}
       </StyledText>
     </View>
   );
@@ -104,9 +112,9 @@ const styles = StyleSheet.create({
     left: 20,
   },
   title: {
-    fontSize: 48,
-    fontWeight: 'bold',
-    marginBottom: 60,
+    fontSize: TYPOGRAPHY.fontSize['5xl'],
+    fontWeight: TYPOGRAPHY.fontWeight.bold,
+    marginBottom: TYPOGRAPHY.fontSize['6xl'],
     textAlign: 'center',
     color: COLORS.text,
   },
@@ -118,10 +126,10 @@ const styles = StyleSheet.create({
     elevation: 15,
   },
   instruction: {
-    fontSize: 20,
+    fontSize: TYPOGRAPHY.fontSize.xl,
     color: COLORS.accent,
-    marginTop: 50,
+    marginTop: DIMENSIONS.buttonHeight,
     textAlign: 'center',
-    fontWeight: '500',
+    fontWeight: TYPOGRAPHY.fontWeight.medium,
   },
 });
