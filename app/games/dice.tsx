@@ -1,12 +1,48 @@
-import { View, StyleSheet, Pressable } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, StyleSheet, Pressable, Animated } from 'react-native';
 import StyledText from '../../components/atoms/Text';
 import { FontAwesome5, Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { COLORS } from '../../lib/core/constants';
+import { COLORS, SHAKE_THRESHOLD, COOLDOWN_TIME } from '../../lib/core/constants';
+import { useAccelerometer } from '../../lib/modules/sensors/acelerometer/useAccelerometer';
+import { isShaking } from '../../lib/core/logic/motion';
 
 export default function DiceGame() {
-  const diceValue = 1;
+  const [diceValue, setDiceValue] = useState(1);
+  const [isRolling, setIsRolling] = useState(false);
+  const [lastShakeTime, setLastShakeTime] = useState(0);
+  const { data, isAvailable } = useAccelerometer();
   const router = useRouter();
+
+  const rollAnimation = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const now = Date.now();
+    if (isAvailable && data && isShaking(data, SHAKE_THRESHOLD) && !isRolling && (now - lastShakeTime > COOLDOWN_TIME)) {
+      setLastShakeTime(now);
+      rollDice();
+    }
+  }, [data]);
+
+  const rollDice = () => {
+    setIsRolling(true);
+    Animated.sequence([
+      Animated.timing(rollAnimation, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(rollAnimation, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      const newValue = Math.floor(Math.random() * 6) + 1;
+      setDiceValue(newValue);
+      setIsRolling(false);
+    });
+  };
 
   const getDiceIconName = (value: number): React.ComponentProps<typeof FontAwesome5>['name'] => {
     const names: { [key: number]: React.ComponentProps<typeof FontAwesome5>['name'] } = {
@@ -20,6 +56,17 @@ export default function DiceGame() {
     return names[value] || 'dice-one';
   };
 
+  const animatedStyle = {
+    transform: [
+      {
+        rotate: rollAnimation.interpolate({
+          inputRange: [0, 1],
+          outputRange: ['0deg', '360deg'],
+        }),
+      },
+    ],
+  };
+
   return (
     <View style={styles.container}>
       <Pressable style={styles.backButton} onPress={() => router.back()}>
@@ -28,16 +75,16 @@ export default function DiceGame() {
 
       <StyledText style={styles.title}>Dado Mágico</StyledText>
 
-      <View style={styles.diceContainer}>
+      <Animated.View style={[styles.diceContainer, animatedStyle]}>
         <FontAwesome5
           name={getDiceIconName(diceValue)}
           size={150}
           color={COLORS.diceBackground}
         />
-      </View>
+      </Animated.View>
 
       <StyledText style={styles.instruction}>
-        Agita tu teléfono para lanzar el dado
+        {isAvailable ? 'Agita tu teléfono para lanzar el dado' : 'Sensor no disponible'}
       </StyledText>
     </View>
   );
