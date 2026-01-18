@@ -1,50 +1,43 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, StyleSheet, Pressable } from 'react-native';
+import StyledText from '../../components/atoms/Text';
+import { FontAwesome5, Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 
 export default function DiceGame() {
   const diceValue = 1;
+  const router = useRouter();
 
-  const getDots = (value: number) => {
-    const positions: { [key: number]: string[] } = {
-      1: ['center'],
-      2: ['topLeft', 'bottomRight'],
-      3: ['topLeft', 'center', 'bottomRight'],
-      4: ['topLeft', 'topRight', 'bottomLeft', 'bottomRight'],
-      5: ['topLeft', 'topRight', 'center', 'bottomLeft', 'bottomRight'],
-      6: ['topLeft', 'topRight', 'middleLeft', 'middleRight', 'bottomLeft', 'bottomRight']
+  const getDiceIconName = (value: number): React.ComponentProps<typeof FontAwesome5>['name'] => {
+    const names: { [key: number]: React.ComponentProps<typeof FontAwesome5>['name'] } = {
+      1: 'dice-one',
+      2: 'dice-two',
+      3: 'dice-three',
+      4: 'dice-four',
+      5: 'dice-five',
+      6: 'dice-six',
     };
-    return positions[value] || [];
-  };
-
-  const getDotStyle = (position: string) => {
-    const dotPositions: { [key: string]: object } = {
-      topLeft: { top: 20, left: 20 },
-      topRight: { top: 20, right: 20 },
-      middleLeft: { top: 65, left: 20 },
-      middleRight: { top: 65, right: 20 },
-      center: { top: 65, left: 65 },
-      bottomLeft: { bottom: 20, left: 20 },
-      bottomRight: { bottom: 20, right: 20 }
-    };
-    return dotPositions[position] || {};
+    return names[value] || 'dice-one';
   };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Dado Mágico</Text>
+      <Pressable style={styles.backButton} onPress={() => router.back()}>
+        <Ionicons name="arrow-back-circle-outline" size={48} color="white" />
+      </Pressable>
 
-      <View style={styles.dice}>
-        {getDots(diceValue).map((position, index) => (
-          <View 
-            key={index} 
-            style={[styles.dot, getDotStyle(position)]} 
-          />
-        ))}
+      <StyledText style={styles.title}>Dado Mágico</StyledText>
+
+      <View style={styles.diceContainer}>
+        <FontAwesome5
+          name={getDiceIconName(diceValue)}
+          size={150}
+          color="white"
+        />
       </View>
 
-      <Text style={styles.instruction}>
+      <StyledText style={styles.instruction}>
         Agita tu teléfono para lanzar el dado
-      </Text>
-
+      </StyledText>
     </View>
   );
 }
@@ -57,31 +50,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a2e',
     padding: 20,
   },
+  backButton: {
+    position: 'absolute',
+    top: 60,
+    left: 20,
+  },
   title: {
     fontSize: 48,
     fontWeight: 'bold',
-    color: '#ffffff',
     marginBottom: 60,
     textAlign: 'center',
   },
-  dice: {
-    width: 150,
-    height: 150,
-    backgroundColor: '#ffffff',
-    borderRadius: 25,
-    position: 'relative',
+  diceContainer: {
     shadowColor: '#9333ea',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.5,
     shadowRadius: 20,
     elevation: 15,
-  },
-  dot: {
-    width: 20,
-    height: 20,
-    backgroundColor: '#1a1a2e',
-    borderRadius: 10,
-    position: 'absolute',
   },
   instruction: {
     fontSize: 20,
@@ -90,5 +75,4 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '500',
   },
-
 });
