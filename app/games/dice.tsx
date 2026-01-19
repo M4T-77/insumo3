@@ -1,99 +1,106 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, Pressable, Animated } from 'react-native';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { View, StyleSheet, Pressable } from 'react-native';
 import StyledText from '../../components/atoms/Text';
-import { FontAwesome5, Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { 
-  COLORS, 
-  SHAKE_THRESHOLD, 
-  COOLDOWN_TIME, 
-  DIMENSIONS, 
-  ANIMATIONS, 
-  TYPOGRAPHY, 
-  MESSAGES 
+import DiceGLB from '../../components/molecules/DiceGLB';
+import {
+  COLORS,
+  SHAKE_THRESHOLD,
+  TYPOGRAPHY,
+  MESSAGES,
+  ROLL_ANIMATION_DURATION,
 } from '../../lib/core/constants';
 import { useAccelerometer } from '../../lib/modules/sensors/acelerometer/useAccelerometer';
 import { isShaking } from '../../lib/core/logic/motion';
 
+const createShuffledBag = () => {
+  const faces = [1, 2, 3, 4, 5, 6];
+  for (let i = faces.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [faces[i], faces[j]] = [faces[j], faces[i]];
+  }
+  return faces;
+};
+
 export default function DiceGame() {
   const [diceValue, setDiceValue] = useState(1);
-  const [isRolling, setIsRolling] = useState(false);
-  const [lastShakeTime, setLastShakeTime] = useState(0);
-  const { data, isAvailable } = useAccelerometer();
+  // Refactor: Use a single state for game status ('ready' | 'rolling')
+  const [status, setStatus] = useState<'ready' | 'rolling'>('ready');
+  const [unseenFaces, setUnseenFaces] = useState(createShuffledBag());
+  const { data, isAvailable, isLoading } = useAccelerometer();
   const router = useRouter();
+  const lastShakeTime = useRef(Date.now());
+  const rollTimeoutRef = useRef<number | null>(null);
 
-  const rollAnimation = useRef(new Animated.Value(0)).current;
+  // Derived state for convenience
+  const isRolling = status === 'rolling';
+  const resultText = isRolling ? MESSAGES.rolling : MESSAGES.ready;
+
+  const rollDice = useCallback(() => {
+    if (status === 'rolling') return;
+
+    const facesToDrawFrom = unseenFaces.length === 0 ? createShuffledBag() : [...unseenFaces];
+    const nextValue = facesToDrawFrom.pop()!;
+    setUnseenFaces(facesToDrawFrom);
+
+    setStatus('rolling');
+
+    rollTimeoutRef.current = setTimeout(() => {
+      setDiceValue(nextValue);
+      setStatus('ready');
+    }, ROLL_ANIMATION_DURATION);
+  }, [status, unseenFaces]);
 
   useEffect(() => {
+    if (!isAvailable || !data) return;
+
     const now = Date.now();
-    if (isAvailable && data && isShaking(data, SHAKE_THRESHOLD) && !isRolling && (now - lastShakeTime > COOLDOWN_TIME)) {
-      setLastShakeTime(now);
+    if (!isRolling && isShaking(data, SHAKE_THRESHOLD) && now - lastShakeTime.current > ROLL_ANIMATION_DURATION) {
+      lastShakeTime.current = now;
       rollDice();
     }
-  }, [data]);
+  }, [data, isAvailable, rollDice, isRolling]);
 
-  const rollDice = () => {
-    setIsRolling(true);
-    Animated.sequence([
-      Animated.timing(rollAnimation, {
-        toValue: 1,
-        duration: ANIMATIONS.fast,
-        useNativeDriver: true,
-      }),
-      Animated.timing(rollAnimation, {
-        toValue: 0,
-        duration: ANIMATIONS.fast,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      const newValue = Math.floor(Math.random() * 6) + 1;
-      setDiceValue(newValue);
-      setIsRolling(false);
-    });
-  };
-
-  const getDiceIconName = (value: number): React.ComponentProps<typeof FontAwesome5>['name'] => {
-    const names: { [key: number]: React.ComponentProps<typeof FontAwesome5>['name'] } = {
-      1: 'dice-one',
-      2: 'dice-two',
-      3: 'dice-three',
-      4: 'dice-four',
-      5: 'dice-five',
-      6: 'dice-six',
+  useEffect(() => {
+    return () => {
+      if (rollTimeoutRef.current) clearTimeout(rollTimeoutRef.current);
     };
-    return names[value] || 'dice-one';
-  };
-
-  const animatedStyle = {
-    transform: [
-      {
-        rotate: rollAnimation.interpolate({
-          inputRange: [0, 1],
-          outputRange: ['0deg', '360deg'],
-        }),
-      },
-    ],
-  };
+  }, []);
 
   return (
     <View style={styles.container}>
       <Pressable style={styles.backButton} onPress={() => router.back()}>
-        <Ionicons name="arrow-back-circle-outline" size={TYPOGRAPHY.fontSize['5xl']} color={COLORS.text} />
+        <Ionicons
+          name="arrow-back-circle-outline"
+          size={TYPOGRAPHY.fontSize['5xl']}
+          color={COLORS.text}
+        />
       </Pressable>
 
-      <StyledText style={styles.title}>{MESSAGES.ready}</StyledText>
+      <StyledText style={styles.title}>
+        {resultText}
+      </StyledText>
 
-      <Animated.View style={[styles.diceContainer, animatedStyle]}>
-        <FontAwesome5
-          name={getDiceIconName(diceValue)}
-          size={DIMENSIONS.diceSize}
-          color={COLORS.diceBackground}
-        />
-      </Animated.View>
+      <DiceGLB value={diceValue} isRolling={isRolling} color="#FFFFFF" pipsColor="#FF0000" />
 
       <StyledText style={styles.instruction}>
-        {isAvailable ? MESSAGES.sensorActive : MESSAGES.sensorUnavailable}
+        {isLoading
+          ? MESSAGES.sensorInactive
+          : isAvailable
+            ? MESSAGES.sensorActive
+            : MESSAGES.sensorUnavailable}
       </StyledText>
+
+      <Pressable
+        style={styles.rollButton}
+        onPress={rollDice}
+        disabled={isRolling}
+      >
+        <StyledText style={styles.rollButtonText}>
+          {MESSAGES.buttonLabel}
+        </StyledText>
+      </Pressable>
     </View>
   );
 }
@@ -110,26 +117,38 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 60,
     left: 20,
+    zIndex: 10,
   },
   title: {
     fontSize: TYPOGRAPHY.fontSize['5xl'],
     fontWeight: TYPOGRAPHY.fontWeight.bold,
-    marginBottom: TYPOGRAPHY.fontSize['6xl'],
+    marginBottom: 60,
     textAlign: 'center',
     color: COLORS.text,
-  },
-  diceContainer: {
-    shadowColor: COLORS.shadow,
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.5,
-    shadowRadius: 20,
-    elevation: 15,
+    height: 100, // Reserve space to prevent layout shift
   },
   instruction: {
     fontSize: TYPOGRAPHY.fontSize.xl,
     color: COLORS.accent,
-    marginTop: DIMENSIONS.buttonHeight,
+    marginTop: 50,
     textAlign: 'center',
     fontWeight: TYPOGRAPHY.fontWeight.medium,
+  },
+  rollButton: {
+    backgroundColor: COLORS.primary,
+    paddingVertical: 15,
+    paddingHorizontal: 40,
+    borderRadius: 15,
+    marginTop: 20,
+    shadowColor: COLORS.shadow,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 5,
+  },
+  rollButtonText: {
+    color: '#403925',
+    fontSize: TYPOGRAPHY.fontSize.lg,
+    fontWeight: TYPOGRAPHY.fontWeight.bold,
   },
 });

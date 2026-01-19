@@ -1,17 +1,13 @@
-export const SHAKE_THRESHOLD = 1.78;
+export const SHAKE_THRESHOLD = 0.8;
 
-export const UPDATE_INTERVAL = 100;
+export const COOLDOWN_TIME = 500;
 
-export const COOLDOWN_TIME = 1000; 
+export const ROLL_ANIMATION_DURATION = 2500;
 
-export const SMOOTHING_SAMPLES = 3;
-
+export const SET_VALUE_DURATION = 1500;
 
 export const DICE_MIN = 1;
 export const DICE_MAX = 6;
-
-export const ROLL_ANIMATION_DURATION = 300;
-
 
 export const COLORS = {
   background: '#403925',
@@ -103,11 +99,12 @@ export const ANIMATIONS = {
 } as const;
 
 export const MESSAGES = {
-  sensorActive: '¡Agita tu teléfono!',
+  sensorActive: '¡Agita o pulsa el dado!',
   sensorInactive: 'Activando sensor...',
-  sensorUnavailable: 'Sensor no disponible',
+  sensorUnavailable: 'Pulsa el dado para lanzar',
   rolling: 'Lanzando...',
   ready: 'Listo para jugar',
+  buttonLabel: 'Lanzar',
 } as const;
 
 export type ColorKeys = keyof typeof COLORS;
