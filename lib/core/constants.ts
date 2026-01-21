@@ -104,7 +104,6 @@ export const MESSAGES = {
   sensorUnavailable: 'Pulsa el dado para lanzar',
   rolling: 'Lanzando...',
   ready: 'Listo para jugar',
-  buttonLabel: 'Lanzar',
 } as const;
 
 export type ColorKeys = keyof typeof COLORS;

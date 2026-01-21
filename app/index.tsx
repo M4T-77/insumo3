@@ -1,4 +1,4 @@
-import { View, StyleSheet, FlatList } from 'react-native';
+import { View, StyleSheet } from 'react-native';
 import GameCard from '../components/molecules/GameCard';
 import StyledText from '../components/atoms/Text';
 import { COLORS } from '../lib/core/constants';
@@ -9,26 +9,28 @@ const games = [
     icon: 'dice-outline' as const,
     link: '/games/dice',
   },
+  {
+    title: 'Ver Hamburguesa',
+    icon: 'fast-food-outline' as const,
+    link: '/games/burger',
+  },
 ];
 
 export default function Home() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <StyledText style={styles.title}>Dado Mágico</StyledText>
+        <StyledText style={styles.title}>Insumo #3</StyledText>
         <StyledText style={styles.subtitle}>
-          App de dado 3D, con acelerómetro
+          Juego de dado y hamburguesa
         </StyledText>
       </View>
 
-      <FlatList
-        data={games}
-        renderItem={({ item }) => (
-          <GameCard title={item.title} icon={item.icon} link={item.link} />
-        )}
-        keyExtractor={(item) => item.title}
-        contentContainerStyle={styles.gameList}
-      />
+      <View style={styles.gameList}>
+        {games.map((item) => (
+          <GameCard key={item.title} title={item.title} icon={item.icon} link={item.link} />
+        ))}
+      </View>
 
     </View>
   );
@@ -37,10 +39,10 @@ export default function Home() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'space-around',
+    justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: COLORS.background,
-    paddingTop: 275,
+    gap: 100,
   },
   header: {
     alignItems: 'center',
@@ -58,6 +60,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   gameList: {
+    flexDirection: 'row',
+    justifyContent: 'center',
     alignItems: 'center',
+    width: '100%',
   },
 });

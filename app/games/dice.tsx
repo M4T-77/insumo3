@@ -1,72 +1,81 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import StyledText from '../../components/atoms/Text';
+import Dice from '../../components/molecules/DiceGLB';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import DiceGLB from '../../components/molecules/DiceGLB';
 import {
-  COLORS,
   SHAKE_THRESHOLD,
+  COOLDOWN_TIME,
+  SET_VALUE_DURATION,
+  COLORS,
   TYPOGRAPHY,
-  MESSAGES,
-  ROLL_ANIMATION_DURATION,
+  SPACING,
+  DIMENSIONS,
+  DICE_MIN,
+  DICE_MAX,
 } from '../../lib/core/constants';
-import { useAccelerometer } from '../../lib/modules/sensors/acelerometer/useAccelerometer';
-import { isShaking } from '../../lib/core/logic/motion';
+import { AccelerometerService } from '../../lib/modules/sensors/acelerometer/accelerometer.service';
 
-const createShuffledBag = () => {
-  const faces = [1, 2, 3, 4, 5, 6];
-  for (let i = faces.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [faces[i], faces[j]] = [faces[j], faces[i]];
-  }
-  return faces;
-};
+const getRandomNumber = (min: number, max: number) =>
+  Math.floor(Math.random() * (max - min + 1)) + min;
 
 export default function DiceGame() {
   const [diceValue, setDiceValue] = useState(1);
-  // Refactor: Use a single state for game status ('ready' | 'rolling')
-  const [status, setStatus] = useState<'ready' | 'rolling'>('ready');
-  const [unseenFaces, setUnseenFaces] = useState(createShuffledBag());
-  const { data, isAvailable, isLoading } = useAccelerometer();
+  const [status, setStatus] = useState<'ready' | 'rolling' | 'setting'>('ready');
+  const statusRef = useRef(status);
+  statusRef.current = status;
+
+  const lastShakeTimeRef = useRef(0);
   const router = useRouter();
-  const lastShakeTime = useRef(Date.now());
   const rollTimeoutRef = useRef<number | null>(null);
+  const settingTimeoutRef = useRef<number | null>(null);
 
-  // Derived state for convenience
-  const isRolling = status === 'rolling';
-  const resultText = isRolling ? MESSAGES.rolling : MESSAGES.ready;
+  const handleRoll = useCallback(() => {
+    const now = Date.now();
+    if (now - lastShakeTimeRef.current < COOLDOWN_TIME || statusRef.current !== 'ready')
+      return;
 
-  const rollDice = useCallback(() => {
-    if (status === 'rolling') return;
-
-    const facesToDrawFrom = unseenFaces.length === 0 ? createShuffledBag() : [...unseenFaces];
-    const nextValue = facesToDrawFrom.pop()!;
-    setUnseenFaces(facesToDrawFrom);
-
+    lastShakeTimeRef.current = now;
     setStatus('rolling');
 
     rollTimeoutRef.current = setTimeout(() => {
-      setDiceValue(nextValue);
-      setStatus('ready');
-    }, ROLL_ANIMATION_DURATION);
-  }, [status, unseenFaces]);
-
-  useEffect(() => {
-    if (!isAvailable || !data) return;
-
-    const now = Date.now();
-    if (!isRolling && isShaking(data, SHAKE_THRESHOLD) && now - lastShakeTime.current > ROLL_ANIMATION_DURATION) {
-      lastShakeTime.current = now;
-      rollDice();
-    }
-  }, [data, isAvailable, rollDice, isRolling]);
-
-  useEffect(() => {
-    return () => {
-      if (rollTimeoutRef.current) clearTimeout(rollTimeoutRef.current);
-    };
+      const newValue = getRandomNumber(DICE_MIN, DICE_MAX);
+      setDiceValue(newValue);
+      setStatus('setting');
+      settingTimeoutRef.current = setTimeout(
+        () => setStatus('ready'),
+        SET_VALUE_DURATION
+      );
+    }, 1000);
   }, []);
+
+  useEffect(() => {
+    let subscription: { remove: () => void } | null = null;
+
+    const setupAccelerometer = async () => {
+      const isAvailable = await AccelerometerService.isAvailable();
+
+      if (isAvailable) {
+        subscription = AccelerometerService.subscribe(({ x, y, z }) => {
+          const magnitude = Math.sqrt(x * x + y * y + z * z);
+          if (magnitude > SHAKE_THRESHOLD) {
+            handleRoll();
+          }
+        });
+      }
+    };
+
+    setupAccelerometer();
+
+    return () => {
+      subscription?.remove();
+      if (rollTimeoutRef.current) clearTimeout(rollTimeoutRef.current);
+      if (settingTimeoutRef.current) clearTimeout(settingTimeoutRef.current);
+    };
+  }, [handleRoll]);
+
+  const isRolling = status === 'rolling';
 
   return (
     <View style={styles.container}>
@@ -78,27 +87,19 @@ export default function DiceGame() {
         />
       </Pressable>
 
-      <StyledText style={styles.title}>
-        {resultText}
-      </StyledText>
+      <View style={styles.textContainer}>
+        <StyledText style={styles.result}>Dado</StyledText>
+      </View>
 
-      <DiceGLB value={diceValue} isRolling={isRolling} color="#FFFFFF" pipsColor="#FF0000" />
-
-      <StyledText style={styles.instruction}>
-        {isLoading
-          ? MESSAGES.sensorInactive
-          : isAvailable
-            ? MESSAGES.sensorActive
-            : MESSAGES.sensorUnavailable}
-      </StyledText>
+      <Dice value={diceValue} isRolling={isRolling} />
 
       <Pressable
-        style={styles.rollButton}
-        onPress={rollDice}
+        style={[styles.rollButton, isRolling && styles.disabledButton]}
+        onPress={handleRoll}
         disabled={isRolling}
       >
         <StyledText style={styles.rollButtonText}>
-          {MESSAGES.buttonLabel}
+          Lanzar
         </StyledText>
       </Pressable>
     </View>
@@ -111,7 +112,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: COLORS.background,
-    padding: 20,
+    padding: SPACING.lg,
   },
   backButton: {
     position: 'absolute',
@@ -119,36 +120,35 @@ const styles = StyleSheet.create({
     left: 20,
     zIndex: 10,
   },
-  title: {
-    fontSize: TYPOGRAPHY.fontSize['5xl'],
-    fontWeight: TYPOGRAPHY.fontWeight.bold,
-    marginBottom: 60,
-    textAlign: 'center',
-    color: COLORS.text,
-    height: 100, // Reserve space to prevent layout shift
+  textContainer: {
+    alignItems: 'center',
+    marginBottom: SPACING['2xl'],
+    minHeight: 100, // Reserve space for text
   },
-  instruction: {
-    fontSize: TYPOGRAPHY.fontSize.xl,
-    color: COLORS.accent,
-    marginTop: 50,
-    textAlign: 'center',
-    fontWeight: TYPOGRAPHY.fontWeight.medium,
+  result: {
+    fontSize: TYPOGRAPHY.fontSize['6xl'],
+    fontWeight: TYPOGRAPHY.fontWeight.bold,
+    color: COLORS.text,
   },
   rollButton: {
     backgroundColor: COLORS.primary,
     paddingVertical: 15,
     paddingHorizontal: 40,
-    borderRadius: 15,
-    marginTop: 20,
-    shadowColor: COLORS.shadow,
+    borderRadius: DIMENSIONS.buttonBorderRadius,
+    marginTop: SPACING['2xl'],
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 5,
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 10,
   },
   rollButtonText: {
     color: '#403925',
     fontSize: TYPOGRAPHY.fontSize.lg,
     fontWeight: TYPOGRAPHY.fontWeight.bold,
+  },
+  disabledButton: {
+    backgroundColor: COLORS.primaryDark,
+    opacity: 0.7,
   },
 });

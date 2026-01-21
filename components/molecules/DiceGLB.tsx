@@ -30,7 +30,7 @@ interface DiceGLBProps {
 const DiceComponent: React.FC<DiceGLBProps> = ({
   value,
   isRolling = false,
-  modelPath = require('@/assets/models/Dice.glb'),
+  modelPath = require('../../assets/models/Dice.glb'),
   color = COLORS.primary,
   pipsColor = COLORS.diceDots,
 }) => {
