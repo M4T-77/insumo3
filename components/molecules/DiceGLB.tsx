@@ -7,17 +7,21 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import StyledText from '../../components/atoms/Text';
 import { COLORS } from '../../lib/core/constants';
 
-const targetQuats = Object.entries({
+const eulerAngles: { [key: number]: [number, number, number] } = {
   1: [0, 0, 0],
   2: [-Math.PI / 2, 0, 0],
   3: [0, 0, Math.PI / 2],
   4: [0, 0, -Math.PI / 2],
   5: [Math.PI / 2, 0, 0],
   6: [Math.PI, 0, 0],
-}).reduce((acc, [k, v]) => {
-  acc[Number(k)] = new THREE.Quaternion().setFromEuler(new THREE.Euler(v[0], v[1], v[2]));
-  return acc;
-}, {} as Record<number, THREE.Quaternion>);
+};
+
+const targetQuats = Object.fromEntries(
+  Object.entries(eulerAngles).map(([k, v]) => [
+    k,
+    new THREE.Quaternion().setFromEuler(new THREE.Euler(...v)),
+  ])
+) as Record<number, THREE.Quaternion>;
 
 interface DiceGLBProps {
   value: number;
@@ -34,17 +38,14 @@ const DiceComponent: React.FC<DiceGLBProps> = ({
   color = COLORS.primary,
   pipsColor = COLORS.diceDots,
 }) => {
-  const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
   const frameRef = useRef<number | null>(null);
-
-  const valueRef = useRef(value);
-  valueRef.current = value;
+  const modelRef = useRef<THREE.Object3D | null>(null);
+  const rotationalVelocity = useRef(new THREE.Vector3());
 
   const isRollingRef = useRef(isRolling);
   isRollingRef.current = isRolling;
-
-  const modelRef = useRef<THREE.Object3D | null>(null);
-  const rotationalVelocity = useRef(new THREE.Vector3());
 
   useEffect(() => {
     if (isRolling) {
@@ -55,15 +56,10 @@ const DiceComponent: React.FC<DiceGLBProps> = ({
         (Math.random() - 0.5) * spinStrength
       );
     }
-  }, [isRolling]);
-
-  useEffect(() => {
     return () => {
-      if (frameRef.current) {
-        cancelAnimationFrame(frameRef.current);
-      }
+      if (frameRef.current) cancelAnimationFrame(frameRef.current);
     };
-  }, []);
+  }, [isRolling]);
 
   const onContextCreate = async (gl: any) => {
     const renderer = new Renderer({ gl });
@@ -74,76 +70,55 @@ const DiceComponent: React.FC<DiceGLBProps> = ({
     const camera = new THREE.PerspectiveCamera(50, gl.aspect, 0.1, 100);
     camera.position.set(0, 1.5, 6);
     camera.lookAt(0, 0, 0);
-
     scene.add(new THREE.AmbientLight(0xffffff, 0.8), new THREE.DirectionalLight(0xffffff, 1));
 
     try {
       const asset = Asset.fromModule(modelPath);
       await asset.downloadAsync();
       const gltf = await new Promise<any>((res, rej) => new GLTFLoader().load(asset.localUri!, res, undefined, rej));
-      
       const mesh = gltf.scene;
 
-      const diceMaterial = new THREE.MeshPhongMaterial({ color });
-      const dotsMaterial = new THREE.MeshPhongMaterial({ color: pipsColor });
-
       mesh.traverse((child: any) => {
-        if (child.isMesh && child.material) {
-          if (child.material.name === 'Dots') {
-            child.material = dotsMaterial;
-          } else if (child.material.name === 'Dice') {
-            child.material = diceMaterial;
-          }
+        if (child.isMesh) {
+            child.material = child.material.name === 'Dots'
+                ? new THREE.MeshPhongMaterial({ color: pipsColor })
+                : new THREE.MeshPhongMaterial({ color });
         }
       });
 
       modelRef.current = mesh;
       scene.add(mesh);
-      setStatus('loaded');
+      setIsLoading(false);
     } catch (e) {
       console.error('Error loading model:', e);
-      setStatus('error');
+      setHasError(true);
+      setIsLoading(false);
       return;
     }
 
     const clock = new THREE.Clock();
-    let wasRolling = isRollingRef.current;
 
     const render = () => {
       frameRef.current = requestAnimationFrame(render);
       const delta = clock.getDelta();
       const model = modelRef.current;
 
-      if (model) {
-        const isCurrentlyRolling = isRollingRef.current;
-        const finalValue = valueRef.current;
-
-        if (wasRolling && !isCurrentlyRolling) {
-          rotationalVelocity.current.set(0, 0, 0);
+      if (!model) return;
+      
+      if (isRollingRef.current) {
+        const rv = rotationalVelocity.current;
+        if (rv.lengthSq() > 0.0001) {
+          rv.multiplyScalar(0.97);
+          const rotationDeltaQuat = new THREE.Quaternion().setFromEuler(new THREE.Euler(rv.x * delta, rv.y * delta, rv.z * delta));
+          model.quaternion.multiplyQuaternions(rotationDeltaQuat, model.quaternion);
         }
-
-        if (isCurrentlyRolling) {
-          const rv = rotationalVelocity.current;
-          if (rv.lengthSq() > 0.0001) {
-            const damping = 0.97;
-            rv.multiplyScalar(damping);
-
-            const rotationDeltaQuat = new THREE.Quaternion().setFromEuler(
-              new THREE.Euler(rv.x * delta, rv.y * delta, rv.z * delta)
-            );
-            model.quaternion.multiplyQuaternions(rotationDeltaQuat, model.quaternion);
-          }
+      } else {
+        const targetQuat = targetQuats[value] || targetQuats[1];
+        if (model.quaternion.angleTo(targetQuat) > 0.01) {
+          model.quaternion.slerp(targetQuat, 0.15);
         } else {
-          const targetQuat = targetQuats[finalValue] || targetQuats[1];
-
-          if (model.quaternion.angleTo(targetQuat) > 0.01) {
-            model.quaternion.slerp(targetQuat, 0.15); 
-          } else {
-            model.quaternion.copy(targetQuat);
-          }
+          model.quaternion.copy(targetQuat);
         }
-        
-        wasRolling = isCurrentlyRolling;
       }
       
       renderer.render(scene, camera);
@@ -154,13 +129,8 @@ const DiceComponent: React.FC<DiceGLBProps> = ({
 
   return (
     <View style={styles.container}>
-      {status !== 'loaded' && (
-        <View style={StyleSheet.absoluteFill}>
-          {status === 'loading' 
-            ? <ActivityIndicator style={styles.centered} color={COLORS.primary} /> 
-            : <StyledText style={styles.centered}>Error loading model.</StyledText>}
-        </View>
-      )}
+      {isLoading && <ActivityIndicator style={StyleSheet.absoluteFill} color={COLORS.primary} />}
+      {hasError && <StyledText style={styles.centered}>Error loading model.</StyledText>}
       <GLView style={styles.glView} onContextCreate={onContextCreate} />
     </View>
   );
@@ -172,6 +142,4 @@ const styles = StyleSheet.create({
   centered: { flex: 1, textAlign: 'center', textAlignVertical: 'center', color: 'red' },
 });
 
-const DiceGLB = memo(DiceComponent);
-
-export default DiceGLB;
+export default memo(DiceComponent);

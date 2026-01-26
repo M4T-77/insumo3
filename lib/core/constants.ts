@@ -13,9 +13,10 @@ export const COLORS = {
   background: '#403925',
   surface: '#73624D',
   primary: '#D9C3A9',
+  secondary: '#A68D77',
   text: '#F2E2CE',
   accent: '#A68D77',
-
+  
   primaryDark: '#73624D',
   primaryLight: '#F2E2CE',
   

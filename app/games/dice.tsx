@@ -4,17 +4,7 @@ import StyledText from '../../components/atoms/Text';
 import Dice from '../../components/molecules/DiceGLB';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import {
-  SHAKE_THRESHOLD,
-  COOLDOWN_TIME,
-  SET_VALUE_DURATION,
-  COLORS,
-  TYPOGRAPHY,
-  SPACING,
-  DIMENSIONS,
-  DICE_MIN,
-  DICE_MAX,
-} from '../../lib/core/constants';
+import { SHAKE_THRESHOLD, COOLDOWN_TIME, ROLL_ANIMATION_DURATION, COLORS, TYPOGRAPHY, SPACING, DIMENSIONS, DICE_MIN, DICE_MAX } from '../../lib/core/constants';
 import { AccelerometerService } from '../../lib/modules/sensors/acelerometer/accelerometer.service';
 
 const getRandomNumber = (min: number, max: number) =>
@@ -22,60 +12,36 @@ const getRandomNumber = (min: number, max: number) =>
 
 export default function DiceGame() {
   const [diceValue, setDiceValue] = useState(1);
-  const [status, setStatus] = useState<'ready' | 'rolling' | 'setting'>('ready');
-  const statusRef = useRef(status);
-  statusRef.current = status;
+  const [isRolling, setIsRolling] = useState(false);
+  const [rollId, setRollId] = useState(0);
 
-  const lastShakeTimeRef = useRef(0);
+  const lastRollTimeRef = useRef(0);
   const router = useRouter();
-  const rollTimeoutRef = useRef<number | null>(null);
-  const settingTimeoutRef = useRef<number | null>(null);
 
   const handleRoll = useCallback(() => {
     const now = Date.now();
-    if (now - lastShakeTimeRef.current < COOLDOWN_TIME || statusRef.current !== 'ready')
-      return;
+    if (isRolling || now - lastRollTimeRef.current < COOLDOWN_TIME) return;
 
-    lastShakeTimeRef.current = now;
-    setStatus('rolling');
+    lastRollTimeRef.current = now;
+    setIsRolling(true);
+    setRollId((id) => id + 1);
 
-    rollTimeoutRef.current = setTimeout(() => {
+    setTimeout(() => {
       const newValue = getRandomNumber(DICE_MIN, DICE_MAX);
       setDiceValue(newValue);
-      setStatus('setting');
-      settingTimeoutRef.current = setTimeout(
-        () => setStatus('ready'),
-        SET_VALUE_DURATION
-      );
-    }, 1000);
-  }, []);
+      setIsRolling(false);
+    }, ROLL_ANIMATION_DURATION);
+  }, [isRolling]);
 
   useEffect(() => {
-    let subscription: { remove: () => void } | null = null;
-
-    const setupAccelerometer = async () => {
-      const isAvailable = await AccelerometerService.isAvailable();
-
-      if (isAvailable) {
-        subscription = AccelerometerService.subscribe(({ x, y, z }) => {
-          const magnitude = Math.sqrt(x * x + y * y + z * z);
-          if (magnitude > SHAKE_THRESHOLD) {
-            handleRoll();
-          }
-        });
+    const subscription = AccelerometerService.subscribe(({ x, y, z }) => {
+      if (Math.sqrt(x * x + y * y + z * z) > SHAKE_THRESHOLD) {
+        handleRoll();
       }
-    };
+    });
 
-    setupAccelerometer();
-
-    return () => {
-      subscription?.remove();
-      if (rollTimeoutRef.current) clearTimeout(rollTimeoutRef.current);
-      if (settingTimeoutRef.current) clearTimeout(settingTimeoutRef.current);
-    };
+    return () => subscription.remove();
   }, [handleRoll]);
-
-  const isRolling = status === 'rolling';
 
   return (
     <View style={styles.container}>
@@ -91,7 +57,7 @@ export default function DiceGame() {
         <StyledText style={styles.result}>Dado</StyledText>
       </View>
 
-      <Dice value={diceValue} isRolling={isRolling} />
+      <Dice key={rollId} value={diceValue} isRolling={true} />
 
       <Pressable
         style={[styles.rollButton, isRolling && styles.disabledButton]}
@@ -99,7 +65,7 @@ export default function DiceGame() {
         disabled={isRolling}
       >
         <StyledText style={styles.rollButtonText}>
-          Lanzar
+          {isRolling ? 'Lanzando...' : 'Lanzar'}
         </StyledText>
       </Pressable>
     </View>
@@ -123,7 +89,7 @@ const styles = StyleSheet.create({
   textContainer: {
     alignItems: 'center',
     marginBottom: SPACING['2xl'],
-    minHeight: 100, // Reserve space for text
+    minHeight: 100,
   },
   result: {
     fontSize: TYPOGRAPHY.fontSize['6xl'],

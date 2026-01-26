@@ -1,17 +1,23 @@
 import { View, StyleSheet } from 'react-native';
-import GameCard from '../components/molecules/GameCard';
-import StyledText from '../components/atoms/Text';
-import { COLORS } from '../lib/core/constants';
+import GameCard from '@/components/molecules/GameCard';
+import StyledText from '@/components/atoms/Text';
+import { COLORS } from '@/lib/core/constants';
 
-const games = [
+interface Game {
+  title: string;
+  icon: any;
+  link: string;
+}
+
+const games: Game[] = [
   {
     title: 'Lanzar Dado',
-    icon: 'dice-outline' as const,
+    icon: 'dice-outline',
     link: '/games/dice',
   },
   {
     title: 'Ver Hamburguesa',
-    icon: 'fast-food-outline' as const,
+    icon: 'fast-food-outline',
     link: '/games/burger',
   },
 ];
@@ -27,11 +33,15 @@ export default function Home() {
       </View>
 
       <View style={styles.gameList}>
-        {games.map((item) => (
-          <GameCard key={item.title} title={item.title} icon={item.icon} link={item.link} />
+        {games.map((item, index) => (
+          <GameCard
+            key={index}
+            title={item.title}
+            icon={item.icon}
+            link={item.link}
+          />
         ))}
       </View>
-
     </View>
   );
 }
@@ -39,16 +49,16 @@ export default function Home() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: COLORS.background,
-    gap: 100,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
   },
   header: {
     alignItems: 'center',
+    marginBottom: 50,
   },
   title: {
-    fontSize: 56,
+    fontSize: 48,
     fontWeight: 'bold',
     marginBottom: 10,
     textAlign: 'center',
@@ -62,7 +72,6 @@ const styles = StyleSheet.create({
   gameList: {
     flexDirection: 'row',
     justifyContent: 'center',
-    alignItems: 'center',
-    width: '100%',
+    flexWrap: 'wrap',
   },
 });
